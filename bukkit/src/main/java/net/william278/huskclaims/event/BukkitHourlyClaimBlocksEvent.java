@@ -19,20 +19,44 @@
 
 package net.william278.huskclaims.event;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import net.william278.huskclaims.HuskClaims;
+import lombok.Getter;
+import lombok.Setter;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("unused")
-@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class BukkitEvent extends Event implements net.william278.huskclaims.event.Event {
+/**
+ * Bukkit event fired when a player receives hourly claim blocks.
+ * <p>
+ * This event is designed for integration with booster plugins (e.g. AxBoosters)
+ * that modify values via reflection using getter/setter methods.
+ * <p>
+ * AxBoosters config example:
+ * <pre>
+ * huskclaims:
+ *   icon: GRASS_BLOCK
+ *   event: net.william278.huskclaims.event.BukkitHourlyClaimBlocksEvent
+ *   player: getPlayer
+ *   getter: getAmount
+ *   setter: setAmount
+ * </pre>
+ */
+@Getter
+public class BukkitHourlyClaimBlocksEvent extends Event {
 
     private static final HandlerList HANDLER_LIST = new HandlerList();
 
-    private final HuskClaims plugin;
+    private final Player player;
+
+    @Setter
+    private long amount;
+
+    public BukkitHourlyClaimBlocksEvent(@NotNull Player player, long amount) {
+        super(false);
+        this.player = player;
+        this.amount = amount;
+    }
 
     @NotNull
     @Override
@@ -42,12 +66,6 @@ public abstract class BukkitEvent extends Event implements net.william278.huskcl
 
     public static HandlerList getHandlerList() {
         return HANDLER_LIST;
-    }
-
-    @Override
-    @NotNull
-    public HuskClaims getPlugin() {
-        return plugin;
     }
 
 }

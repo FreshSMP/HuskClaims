@@ -1,4 +1,4 @@
-HuskClaims provides API for getting, creating resizing, & deleting [[claims]], child claims, and admin claims, and managing [[claim blocks]].
+HuskClaims provides API for getting, creating resizing, & deleting [[claims]], child claims, and admin claims, managing [[claim blocks]], and attaching persistent metadata to claims.
 
 This page assumes you have read the general [[API]] introduction and that you have both imported HuskClaims into your project and added it as a dependency.
 
@@ -9,6 +9,7 @@ This page assumes you have read the general [[API]] introduction and that you ha
 * [3. Editing claims](#3-editing-claims)
   * [3.1 Resizing & deleting claims](#31-resizing--deleting-claims)
 * [4. Checking & updating a user's claim blocks](#4-checking--updating-a-users-claim-blocks)
+* [5. Reading & writing claim metadata](#5-reading--writing-claim-metadata)
 
 ## 1. Getting if a location is claimed
 * On the Bukkit platform, get a `Position` object using `#getPosition(org.bukkit.Location location)`
@@ -172,6 +173,33 @@ void giveClaimBlocks(org.bukkit.Player player, long amount) {
         System.out.println("Took " + amount + " claim blocks from " + player.getName());
     } else {
         System.out.println(player.getName() + " does not have enough claim blocks!");
+    }
+}
+```
+</details>
+
+## 5. Reading & writing claim metadata
+* Your plugin can attach persistent `String` key-value data to a `Claim` through its metadata store, letting you save custom claim data without your own storage
+* Read a value using `#getClaimMetadata(Claim claim, String key)`, which returns an `Optional<String>`
+* Write a value using `#setClaimMetadata(Claim claim, ClaimWorld claimWorld, String key, String value)`, which persists the change asynchronously
+* Note that metadata is **not** inherited: a child claim does not contain its parent claim's metadata (and vice versa). If you need a parent's data, read it from the parent `Claim` directly using `#getParent()`
+
+<details>
+<summary>Example &mdash; Reading & writing claim metadata</summary>
+
+```java
+void manageClaimHome(org.bukkit.Location location) {
+    Position position = huskClaims.getPosition(location);
+    Optional<ClaimWorld> claimWorld = huskClaims.getClaimWorld(position.getWorld());
+    Optional<Claim> claim = huskClaims.getClaimAt(position);
+    if (claimWorld.isPresent() && claim.isPresent()) {
+        Optional<String> home = huskClaims.getClaimMetadata(claim.get(), "myplugin:home");
+        if (home.isPresent()) {
+            System.out.println("This claim's home is at " + home.get());
+        } else {
+            huskClaims.setClaimMetadata(claim.get(), claimWorld.get(), "myplugin:home", position.toString());
+            System.out.println("Set this claim's home!");
+        }
     }
 }
 ```

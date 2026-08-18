@@ -947,6 +947,35 @@ public class HuskClaimsAPI {
     }
 
     /**
+     * Get a value from a {@link Claim}'s metadata store.
+     *
+     * @param claim the claim
+     * @param key   the metadata key
+     * @return the value, if present
+     * @since 1.5
+     */
+    public Optional<String> getClaimMetadata(@NotNull Claim claim, @NotNull String key) {
+        return Optional.ofNullable(claim.getMetadata().get(key));
+    }
+
+    /**
+     * Set a value in a {@link Claim}'s metadata store, persisting the change asynchronously.
+     *
+     * @param claim      the claim
+     * @param claimWorld the claim world that the claim is in
+     * @param key        the metadata key
+     * @param value      the value to set
+     * @since 1.5
+     */
+    public void setClaimMetadata(@NotNull Claim claim, @NotNull ClaimWorld claimWorld,
+                                 @NotNull String key, @NotNull String value) {
+        plugin.runAsync(() -> {
+            claim.getMetadata().put(key, value);
+            plugin.getDatabase().updateClaimWorld(claimWorld);
+        });
+    }
+
+    /**
      * Get the effective trust level of a {@link Trustable} in a {@link Claim} at a {@link Position}.
      * <p>
      * "Effective" trust level takes into account if the position is in a child claim, and whether that child claim

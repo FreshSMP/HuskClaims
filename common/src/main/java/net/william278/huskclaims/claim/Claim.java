@@ -159,6 +159,13 @@ public class Claim implements Highlightable {
     @SerializedName("creation_time")
     private String creationTime;
 
+    /**
+     * Generic key-value metadata store for third-party plugins to attach persistent data to a claim.
+     */
+    @Expose
+    @SerializedName("metadata")
+    private Map<String, String> metadata;
+
     protected Claim(@Nullable UUID owner, @NotNull Region region, @NotNull ConcurrentMap<UUID, String> users,
                     @NotNull ConcurrentMap<String, String> groups, @NotNull ConcurrentMap<String, String> tags,
                     @NotNull ConcurrentMap<UUID, UUID> bannedUsers, @NotNull Set<Claim> children, boolean inheritParent,
@@ -174,6 +181,7 @@ public class Claim implements Highlightable {
         this.inheritParent = inheritParent;
         this.creationTime = OffsetDateTime.now().toString();
         this.privateClaim = privateClaim;
+        this.metadata = Maps.newConcurrentMap();
         children.forEach(child -> child.setParent(this));
     }
 
@@ -325,17 +333,16 @@ public class Claim implements Highlightable {
      * @since 1.0
      */
     public void setTrustLevel(@NotNull Trustable trustable, @NotNull TrustLevel level) {
-        if (trustable instanceof User user) {
-            setUserTrustLevel(user.getUuid(), level);
-        } else if (trustable instanceof UserGroup group) {
-            if (isAdminClaim()) {
-                throw new IllegalArgumentException("Cannot set group trust level in admin claim");
+        switch (trustable) {
+            case User user -> setUserTrustLevel(user.getUuid(), level);
+            case UserGroup group -> {
+                if (isAdminClaim()) {
+                    throw new IllegalArgumentException("Cannot set group trust level in admin claim");
+                }
+                setGroupTrustLevel(group, level);
             }
-            setGroupTrustLevel(group, level);
-        } else if (trustable instanceof TrustTag tag) {
-            setTagTrustLevel(tag, level);
-        } else {
-            throw new IllegalArgumentException("Trustable must be a User, UserGroup, or TrustTag");
+            case TrustTag tag -> setTagTrustLevel(tag, level);
+            default -> throw new IllegalArgumentException("Trustable must be a User, UserGroup, or TrustTag");
         }
     }
 
@@ -347,15 +354,14 @@ public class Claim implements Highlightable {
      * @since 1.0
      */
     public void removeTrustLevel(@NotNull Trustable trustable, @NotNull ClaimWorld world) {
-        if (trustable instanceof User user) {
-            trustedUsers.remove(user.getUuid());
-            world.cacheUser(user);
-        } else if (trustable instanceof UserGroup group) {
-            trustedGroups.remove(group.name());
-        } else if (trustable instanceof TrustTag tag) {
-            trustedTags.remove(tag.getName());
-        } else {
-            throw new IllegalArgumentException("Trustable must be a User, UserGroup, or TrustTag");
+        switch (trustable) {
+            case User user -> {
+                trustedUsers.remove(user.getUuid());
+                world.cacheUser(user);
+            }
+            case UserGroup group -> trustedGroups.remove(group.name());
+            case TrustTag tag -> trustedTags.remove(tag.getName());
+            default -> throw new IllegalArgumentException("Trustable must be a User, UserGroup, or TrustTag");
         }
     }
 
@@ -441,14 +447,12 @@ public class Claim implements Highlightable {
      * @since 1.0
      */
     public Optional<TrustLevel> getTrustLevel(@NotNull Trustable trustable, @NotNull HuskClaims plugin) {
-        if (trustable instanceof User user) {
-            return getUserTrustLevel(user, plugin);
-        } else if (trustable instanceof UserGroup group) {
-            return getGroupTrustLevel(group.name(), plugin);
-        } else if (trustable instanceof TrustTag tag) {
-            return getTagTrustLevel(tag.getName(), plugin);
-        }
-        throw new IllegalArgumentException("Trustable must be a User, UserGroup, or TrustedTag");
+        return switch (trustable) {
+            case User user -> getUserTrustLevel(user, plugin);
+            case UserGroup group -> getGroupTrustLevel(group.name(), plugin);
+            case TrustTag tag -> getTagTrustLevel(tag.getName(), plugin);
+            default -> throw new IllegalArgumentException("Trustable must be a User, UserGroup, or TrustedTag");
+        };
     }
 
     /**
@@ -566,6 +570,24 @@ public class Claim implements Highlightable {
     @NotNull
     public Optional<OffsetDateTime> getCreationTime() {
         return Optional.ofNullable(creationTime).map(OffsetDateTime::parse);
+    }
+
+    /**
+     * Get the mutable generic metadata store for this claim.
+     * <p>
+     * Third-party plugins may use this to attach persistent key-value data that travels with the claim through
+     * resizes, transfers, deletions and cross-server synchronisation. Mutating the returned map and then persisting
+     * the {@link ClaimWorld} (e.g. via the API) will save the changes.
+     *
+     * @return the mutable metadata map
+     * @since 1.5
+     */
+    @NotNull
+    public Map<String, String> getMetadata() {
+        if (metadata == null) {
+            metadata = Maps.newConcurrentMap();
+        }
+        return metadata;
     }
 
     @NotNull
