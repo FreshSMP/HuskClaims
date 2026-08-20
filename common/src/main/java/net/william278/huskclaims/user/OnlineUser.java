@@ -32,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Platform-agnostic representation of an online user
@@ -72,7 +73,12 @@ public abstract class OnlineUser extends User implements OperationUser, CommandU
     }
 
     public void sendMessage(@NotNull MineDown mineDown) {
-        sendMessage(mineDown.toComponent());
+        try {
+            sendMessage(mineDown.toComponent());
+        } catch (Throwable e) {
+            plugin.log(Level.WARNING, "Failed to format a message: %s".formatted(mineDown.message()), e);
+            sendMessage(Component.text(mineDown.message()));
+        }
     }
 
     public abstract void sendPluginMessage(@NotNull String channel, byte[] message);

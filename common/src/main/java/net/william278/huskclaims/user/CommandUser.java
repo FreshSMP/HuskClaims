@@ -40,7 +40,24 @@ public interface CommandUser {
     }
 
     default void sendMessage(@NotNull MineDown mineDown) {
-        this.sendMessage(mineDown.toComponent());
+        this.sendMessage(format(mineDown));
+    }
+
+    /**
+     * Format a {@link MineDown} message into a {@link Component}, falling back to the plain, un-formatted message
+     * if it couldn't be parsed - a badly formatted locale, or one using a formatting feature the server's Adventure
+     * version doesn't support, should never break the command a user is running.
+     *
+     * @param mineDown the message to format
+     * @return the formatted component
+     */
+    @NotNull
+    static Component format(@NotNull MineDown mineDown) {
+        try {
+            return mineDown.toComponent();
+        } catch (Throwable e) {
+            return Component.text(mineDown.message());
+        }
     }
 
 }
