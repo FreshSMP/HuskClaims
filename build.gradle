@@ -87,6 +87,12 @@ allprojects {
         maven { url 'https://mvn-repo.arim.space/lesser-gpl3/' }
     }
 
+    configurations.configureEach {
+        // MineDown is vendored (see common/src/main/java/de/themoep/minedown/adventure) with support for the
+        // Adventure 5 click event API used by Minecraft 26.2; don't let a transitive copy of it shadow that.
+        exclude group: 'net.william278', module: 'minedown'
+    }
+
     dependencies {
         testImplementation(platform("org.junit:junit-bom:5.13.4"))
         testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -97,6 +103,8 @@ allprojects {
     license {
         rule(rootProject.file('HEADER'))
         include('**/*.java')
+        // Vendored MineDown (MIT licensed) - see common/src/main/java/de/themoep/minedown/adventure
+        exclude('**/de/themoep/minedown/**')
     }
 
     test {

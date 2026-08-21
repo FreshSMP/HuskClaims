@@ -27,6 +27,7 @@ import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.platform.AudienceProvider;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.william278.cloplib.operation.OperationType;
@@ -64,6 +65,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
@@ -83,7 +85,16 @@ public class BukkitHuskClaims extends JavaPlugin implements HuskClaims, BukkitTa
         BukkitBlockProvider, BukkitSafeTeleportProvider, BukkitPetHandler, BukkitEventDispatcher, BukkitHookProvider,
         PluginMessageListener {
 
+    /**
+     * Whether the server implements Adventure natively (Paper 1.16.5+), in which case {@link CommandSender}s are
+     * {@link Audience}s themselves and the legacy adventure-platform bridge isn't needed - which matters on
+     * Minecraft 26.2, where the server ships Adventure 5 and adventure-platform (built for Adventure 4) can't be
+     * used to send components.
+     */
+    private static final boolean NATIVE_AUDIENCES = Audience.class.isAssignableFrom(CommandSender.class);
+
     private MorePaperLib morePaperLib;
+    @Nullable
     private AudienceProvider audiences;
     private Toilet toilet;
     private final Gson gson = getGsonBuilder().create();
@@ -128,7 +139,7 @@ public class BukkitHuskClaims extends JavaPlugin implements HuskClaims, BukkitTa
 
     @Override
     public void onEnable() {
-        this.audiences = BukkitAudiences.create(this);
+        this.audiences = NATIVE_AUDIENCES ? null : BukkitAudiences.create(this);
         this.morePaperLib = new MorePaperLib(this);
         this.toilet = BukkitToilet.create(getDumpOptions());
         this.enable();
@@ -253,10 +264,38 @@ public class BukkitHuskClaims extends JavaPlugin implements HuskClaims, BukkitTa
         });
     }
 
+    @NotNull
+    @Override
+    public Audience getAudience(@NotNull UUID user) {
+        if (!NATIVE_AUDIENCES) {
+            return getAudiences().player(user);
+        }
+        final Player player = getServer().getPlayer(user);
+        return player == null || !player.isOnline() ? Audience.empty() : (Audience) player;
+    }
+
     @Override
     @NotNull
     public ConsoleUser getConsole() {
-        return ConsoleUser.wrap(audiences.console());
+        return ConsoleUser.wrap(NATIVE_AUDIENCES
+                ? (Audience) getServer().getConsoleSender() : getAudiences().console());
+    }
+
+    /**
+     * Get the legacy adventure-platform audience provider, creating it if needed.
+     * <p>
+     * Prefer {@link #getAudience(UUID)} and {@link #getConsole()}; on servers that support Adventure natively this
+     * bridge is never used as it doesn't support the Adventure version modern servers ship with.
+     *
+     * @return the {@link AudienceProvider}
+     */
+    @NotNull
+    @Override
+    public synchronized AudienceProvider getAudiences() {
+        if (audiences == null) {
+            audiences = BukkitAudiences.create(this);
+        }
+        return audiences;
     }
 
     @Override
