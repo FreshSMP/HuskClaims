@@ -19,13 +19,13 @@
 
 package net.william278.huskclaims.user;
 
-import io.papermc.lib.PaperLib;
 import lombok.Getter;
 import net.william278.cloplib.listener.InspectorCallbackProvider;
 import net.william278.huskclaims.BukkitHuskClaims;
 import net.william278.huskclaims.HuskClaims;
 import net.william278.huskclaims.hook.HuskHomesHook;
 import net.william278.huskclaims.position.Position;
+import net.william278.huskclaims.util.PaperApiCompat;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -126,7 +126,7 @@ public class BukkitUser extends OnlineUser {
 
     private void teleportInstant(@NotNull Position position) {
         final Location location = BukkitHuskClaims.Adapter.adapt(position);
-        plugin.runSync(bukkitPlayer, () -> PaperLib.teleportAsync(bukkitPlayer, location));
+        plugin.runSync(bukkitPlayer, () -> PaperApiCompat.teleportAsync(bukkitPlayer, location));
     }
 
     @Override
