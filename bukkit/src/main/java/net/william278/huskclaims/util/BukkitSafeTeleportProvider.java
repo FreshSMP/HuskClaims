@@ -19,7 +19,6 @@
 
 package net.william278.huskclaims.util;
 
-import io.papermc.lib.PaperLib;
 import net.william278.huskclaims.BukkitHuskClaims;
 import net.william278.huskclaims.position.Position;
 import net.william278.huskclaims.position.World;
@@ -45,7 +44,7 @@ public interface BukkitSafeTeleportProvider extends SafeTeleportProvider {
     @NotNull
     default CompletableFuture<Optional<Position>> findSafePosition(@NotNull Position position) {
         final Location location = BukkitHuskClaims.Adapter.adapt(position);
-        return PaperLib.getChunkAtAsync(location).thenApply(Chunk::getChunkSnapshot).thenApply(
+        return PaperApiCompat.getChunkAtAsync(location).thenApply(Chunk::getChunkSnapshot).thenApply(
                 (chunk) -> getSafe(position.getWorld(), chunk, location.getBlockX(), location.getBlockZ())
         );
     }
